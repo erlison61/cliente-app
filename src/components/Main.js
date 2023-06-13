@@ -1,57 +1,51 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Form, Container, Row } from 'react-bootstrap';
+import { Button, Container, Row } from 'react-bootstrap';
+import '../index.css';
 
-//import foods from '../models/foods';
-import Food from './Food';
+import Food from './UserCard';
 import FoodForm from './FoodForm';
 
 const Main = () => {
-  let [foods, setFoods] = useState([]);
-
-  let [nome, setNome] = useState('');
-
+  const [users, setUsers] = useState([]);
   const [show, setShow] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
   let buttonAdd = useRef(null);
 
-  async function getComidas() {
-    const response = await fetch('http://localhost:4000/comidas', {
-      method: 'GET',
-    });
-    const data = await response.json();
-
-    return data;
-  }
-
-  const handleClick = async (event) => {
-    console.log('Antes do fecth');
-    const data = await getComidas();
-    console.log(data);
-    console.log('Depois do fetch!');
-  };
-
   useEffect(() => {
-    fetch('http://localhost:4000/foods')
-      .then((response) => {
-        return response.json();
-      })
+    fetch('http://localhost:5050/users')
+      .then((response) => response.json())
       .then((data) => {
-        setFoods([...data]);
+        setUsers(data);
       })
-      .catch();
+      .catch((error) => {
+        console.error('Error fetching users:', error);
+      });
   }, []);
 
-  const nomeHandleChange = (event) => {
-    setNome(event.target.value);
+  // Cálculo para obter os índices dos usuários a serem exibidos na página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = users.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Função para mudar para a próxima página
+  const nextPage = () => {
+    setCurrentPage(currentPage + 1);
+  };
+
+  // Função para voltar para a página anterior
+  const prevPage = () => {
+    setCurrentPage(currentPage - 1);
   };
 
   return (
     <main>
       <Container>
-        <h1>Menu</h1>
+        <h1 className="text-center">Menu</h1>
         <div className="text-right">
           <Button
             variant="secondary"
@@ -63,32 +57,30 @@ const Main = () => {
           </Button>
         </div>
 
-        {/* Component Button do bootstrap. */}
-        <Form.Group className="mb-3">
-          <Form.Label>Alimento</Form.Label>
-          <Form.Control
-            type="text"
-            placeholder="Café"
-            value={nome}
-            onChange={nomeHandleChange}
-          />
-        </Form.Group>
-
-        <Button onClick={handleClick} variant="primary">
-          Pesquisar
-        </Button>
-
         <Row className="my-2">
-          {foods.map((food) => (
-            <Food key={food.id} food={food}></Food>
+          {currentItems.map((user) => (
+            <Food key={user.id} user={user}></Food>
           ))}
         </Row>
+
+        <div className="text-center">
+          {currentPage > 1 && (
+            <Button variant="primary" className="mr-2" onClick={prevPage}>
+              Prev
+            </Button>
+          )}
+          {indexOfLastItem < users.length && (
+            <Button variant="primary" onClick={nextPage}>
+              Next
+            </Button>
+          )}
+        </div>
 
         <FoodForm
           show={show}
           handleClose={handleClose}
-          foods={foods}
-          setFoods={setFoods}
+          users={users}
+          setUsers={setUsers}
         ></FoodForm>
       </Container>
     </main>

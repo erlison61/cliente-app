@@ -1,43 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
 
-const FoodForm = ({ show, handleClose, foods, setFoods }) => {
-  // var {} = props;
+const FoodForm = ({ show, handleClose, users, setUsers }) => {
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    nascimento: '',
+    cep: '',
+  });
 
-  let [food, setFood] = useState({ name: '', image: '' });
+  let [user, setUser] = useState({
+    name: '',
+    email: '',
+    nascimento: '',
+    cep: '',
+  });
 
   const handleChange = (event) => {
-    setFood({ ...food, [event.target.name]: event.target.value });
+    setUser({ ...user, [event.target.name]: event.target.value });
   };
 
+  useEffect(() => {
+    async function verificarCep() {
+      const apiUrl = `https://viacep.com.br/ws/${user.cep}/json`;
+  
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+  
+        const cep = data.cep.replace("-","")
+        const cepInput = user.cep.replace("-","");
+        
+        if (response.ok) {
+          if (data.erro || cep !== cepInput) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              cep: 'Por favor, digite um CEP válido.',
+            }));
+          } else {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              cep: '',
+            }));
+          }
+        } else {
+          throw new Error('Erro ao obter os dados do CEP');
+        }
+      } catch (error) {
+        console.error('Erro ao obter os dados do CEP:', error);
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          cep: 'Por favor, digite um CEP válido.',
+        }));
+      }
+    }
+  
+    verificarCep();
+  }, [user.cep]);
+  
+  
+  
+  
+
+  const validaCampos = () => {
+    const validationErrors = {};
+  
+    if (!user.name) validationErrors.name = 'Por favor, preencha o nome';
+    
+    if (!user.email) validationErrors.email = 'Por favor, preencha o email';
+    
+    if (!user.nascimento) validationErrors.nascimento = 'Por favor, preencha a data de nascimento';
+    
+    if (!user.cep) validationErrors.cep = 'Por favor, preencha o CEP';
+    
+  
+    setErrors(validationErrors);
+  
+    return Object.keys(validationErrors).length === 0;
+  };
+  
   const handleOnSubmit = (event) => {
     event.preventDefault();
-    // Enviar os dados para o servidor backend.
-    fetch('http://localhost:4000/foods', {
-      method: 'POST', // Método de envio.
-      body: JSON.stringify(food), // Converte o Json em string
+  
+    if (!validaCampos()) {
+      return;
+    }
+  
+    fetch('http://localhost:5050/users', {
+      method: 'POST',
+      body: JSON.stringify(user),
       headers: {
-        'Content-Type': 'application/json', // Especifica o tipo do conteúdo da requisição.
+        'Content-Type': 'application/json',
       },
     })
       .then((response) => {
-        if (response.ok == true) {
-          // Fechar modal.
+        if (response.ok) {
           handleClose();
           return response.json();
         }
       })
       .then((data) => {
-        setFoods([...foods, data]);
+        setUsers([...users, data]);
       })
-      .catch((error) => {});
-    // Atualizar a lista dos itens do cardápio.
+      .catch((error) => {
+        console.error(error);
+      });
   };
-
+  
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
-        <Modal.Title>Cadastro de Comida</Modal.Title>
+        <Modal.Title>Cadastro de usuário</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleOnSubmit}>
         <Modal.Body>
@@ -48,31 +121,49 @@ const FoodForm = ({ show, handleClose, foods, setFoods }) => {
               placeholder="Nome"
               name="name"
               onChange={handleChange}
-              value={food.name}
+              value={user.name}
+              isInvalid={!!errors.name}
             />
+            <Form.Control.Feedback type="invalid">{errors.name}</Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formBasicEmail">
-            <Form.Label>Imagem</Form.Label>
+            <Form.Label>Email</Form.Label>
             <Form.Control
-              type="text"
-              placeholder="Imagem"
-              name="image"
+              type="email"
+              placeholder="Email"
+              name="email"
               onChange={handleChange}
-              value={food.image}
+              value={user.email}
+              isInvalid={!!errors.email}
             />
+            <Form.Control.Feedback type="invalid">{errors.email}</Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formBasicEmail">
-            <Form.Label>Descrição</Form.Label>
+            <Form.Label>Nascimento</Form.Label>
             <Form.Control
-              as="textarea"
-              type="text"
-              placeholder="Descrição"
-              name="description"
+              type="date"
+              placeholder="Nascimento"
+              name="nascimento"
               onChange={handleChange}
-              value={food.description}
+              value={user.nascimento}
+              isInvalid={!!errors.nascimento}
             />
+            <Form.Control.Feedback type="invalid">{errors.nascimento}</Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="formBasicEmail">
+            <Form.Label>CEP</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="CEP"
+              name="cep"
+              onChange={handleChange}
+              value={user.cep}
+              isInvalid={!!errors.cep}
+            />
+            <Form.Control.Feedback type="invalid">{errors.cep}</Form.Control.Feedback>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
