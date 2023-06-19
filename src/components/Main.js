@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Container, Row } from 'react-bootstrap';
 import '../index.css';
 
-import Food from './UserCard';
-import FoodForm from './FoodForm';
+import User from './UserCard';
+import UserForm from './UserForm';
 
 const Main = () => {
   const [users, setUsers] = useState([]);
@@ -17,7 +17,7 @@ const Main = () => {
   let buttonAdd = useRef(null);
 
   useEffect(() => {
-    fetch('http://localhost:5050/users')
+    fetch('http://localhost:4000/users')
       .then((response) => response.json())
       .then((data) => {
         setUsers(data);
@@ -59,7 +59,7 @@ const Main = () => {
 
         <Row className="my-2">
           {currentItems.map((user) => (
-            <Food key={user.id} user={user}></Food>
+            <User key={user.id} user={user}></User>
           ))}
         </Row>
 
@@ -76,12 +76,12 @@ const Main = () => {
           )}
         </div>
 
-        <FoodForm
+        <UserForm
           show={show}
           handleClose={handleClose}
           users={users}
           setUsers={setUsers}
-        ></FoodForm>
+        ></UserForm>
       </Container>
     </main>
   );

@@ -1,92 +1,93 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
 
-const FoodForm = ({ show, handleClose, users, setUsers }) => {
-  const [errors, setErrors] = useState({
-    name: '',
-    email: '',
-    nascimento: '',
-    cep: '',
-  });
+const UserForm = ({ show, handleClose, users, setUsers }) => {
+  const [errors, setErrors] = useState({name: '',email: '',nascimento: '',cep: ''});
 
-  let [user, setUser] = useState({
-    name: '',
-    email: '',
-    nascimento: '',
-    cep: '',
-  });
-
-  const handleChange = (event) => {
-    setUser({ ...user, [event.target.name]: event.target.value });
-  };
+  const [user, setUser] = useState({name: '',email: '',nascimento: '',cep: ''});
 
   useEffect(() => {
-    async function verificarCep() {
-      const apiUrl = `https://viacep.com.br/ws/${user.cep}/json`;
-  
-      try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-  
-        const cep = data.cep.replace("-","")
-        const cepInput = user.cep.replace("-","");
-        
-        if (response.ok) {
-          if (data.erro || cep !== cepInput) {
+    const debounceTimer = setTimeout(() => {
+      verificarCep(user.cep)
+        .then((cepValido) => {
+          if (!cepValido) {
             setErrors((prevErrors) => ({
               ...prevErrors,
-              cep: 'Por favor, digite um CEP válido.',
-            }));
-          } else {
-            setErrors((prevErrors) => ({
-              ...prevErrors,
-              cep: '',
+              cep: 'Por favor, digite um CEP válido',
             }));
           }
-        } else {
-          throw new Error('Erro ao obter os dados do CEP');
-        }
-      } catch (error) {
-        console.error('Erro ao obter os dados do CEP:', error);
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          cep: 'Por favor, digite um CEP válido.',
-        }));
+        })
+        .catch((error) => {
+          console.error('Erro ao verificar CEP:', error);
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            cep: 'Ocorreu um erro ao verificar o CEP',
+          }));
+        });
+      }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [user.cep])
+
+  const handleChange = (event) => {
+    const fieldName = event.target.name;
+    const fieldValue = event.target.value;
+
+    setUser((prevUser) => ({
+      ...prevUser,
+      [fieldName]: fieldValue,
+    }));
+
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      [fieldName]: '',
+    }));
+  }
+
+  const verificarCep = async (cep) => {
+    const apiUrl = `https://viacep.com.br/ws/${cep}/json`;
+
+    try {
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error('Erro na requisição');
       }
+
+      const data = await response.json();
+      const cepValido = !data.erro;
+
+      return cepValido;
+    
+    } catch (error) {
+      console.error('Erro ao obter os dados do CEP:', error);
+
+      throw new Error('Por favor, digite um CEP válido.');
     }
-  
-    verificarCep();
-  }, [user.cep]);
-  
-  
-  
-  
+  }
 
   const validaCampos = () => {
-    const validationErrors = {};
-  
-    if (!user.name) validationErrors.name = 'Por favor, preencha o nome';
-    
-    if (!user.email) validationErrors.email = 'Por favor, preencha o email';
-    
-    if (!user.nascimento) validationErrors.nascimento = 'Por favor, preencha a data de nascimento';
-    
-    if (!user.cep) validationErrors.cep = 'Por favor, preencha o CEP';
-    
-  
-    setErrors(validationErrors);
-  
-    return Object.keys(validationErrors).length === 0;
-  };
-  
+    const errosValidacao = {};
+
+    if (!user.name) errosValidacao.name = 'Por favor, preencha o nome';
+
+    if (!user.email) errosValidacao.email = 'Por favor, preencha o email';
+
+    if (!user.nascimento) errosValidacao.nascimento = 'Por favor, preencha a data de nascimento';
+
+    if (!user.cep) errosValidacao.cep = 'Por favor, digite um CEP válido';
+
+    setErrors((errosAnteriores) => ({...errosAnteriores,...errosValidacao}));
+
+    return Object.keys(errosValidacao).length === 0;
+  }
+
   const handleOnSubmit = (event) => {
     event.preventDefault();
-  
-    if (!validaCampos()) {
-      return;
-    }
-  
-    fetch('http://localhost:5050/users', {
+
+    if (!validaCampos()) return;
+
+    fetch('http://localhost:4000/users', {
       method: 'POST',
       body: JSON.stringify(user),
       headers: {
@@ -97,6 +98,8 @@ const FoodForm = ({ show, handleClose, users, setUsers }) => {
         if (response.ok) {
           handleClose();
           return response.json();
+        } else {
+          throw new Error('Erro ao enviar o formulário');
         }
       })
       .then((data) => {
@@ -105,8 +108,8 @@ const FoodForm = ({ show, handleClose, users, setUsers }) => {
       .catch((error) => {
         console.error(error);
       });
-  };
-  
+  }
+
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
@@ -179,4 +182,4 @@ const FoodForm = ({ show, handleClose, users, setUsers }) => {
   );
 };
 
-export default FoodForm;
+export default UserForm;
